@@ -37,12 +37,12 @@ list_all_versions() {
 }
 
 download_release() {
-	local version filename url
+	local version filename url arch_and_platform
 	version="$1"
 	filename="$2"
+	arch_and_platform="$(get_arch_and_platform)"
 
-	# TODO: Adapt the release URL convention for allurectl
-	url="$GH_REPO/archive/v${version}.tar.gz"
+	url="$GH_REPO/releases/download/${version}/allurectl_${arch_and_platform}"
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
@@ -71,4 +71,37 @@ install_version() {
 		rm -rf "$install_path"
 		fail "An error occurred while installing $TOOL_NAME $version."
 	)
+}
+
+get_arch_and_platform() {
+	local -r os="$(get_os)"
+	local -r machine="$(uname -m)"
+
+	if [[ $os == "macosx" ]]; then
+		case $machine in
+		arm64) echo "darwin_arm64" ;;
+		x86_64) echo "darwin_amd64" ;;
+		*) echo "darwin_arm64" ;; # arm by default
+		esac
+	else
+		if [[ $os == "linux" ]]; then
+			case $machine in
+			x86_64) echo "linux_amd64" ;;
+			*) echo "linux_arm64" ;; # arm by default
+			esac
+		else
+			echo "Unsupported OS: $os"
+			exit 1
+		fi
+	fi
+}
+
+get_os() {
+	local -r platform="$(uname -s)"
+
+	case $platform in
+	Darwin) echo "macosx" ;;
+	Linux) echo "linux" ;;
+	*) echo "$platform" ;;
+	esac
 }
